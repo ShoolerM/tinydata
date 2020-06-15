@@ -1,0 +1,17 @@
+.data
+    a = 1
+    b = 5
+    c = 1
+.prog
+loop:
+    lda a
+    add c
+    sta a
+    lda b
+    sub c
+    jz done
+    sta b
+    jmp loop
+done:
+    lda a
+    halt

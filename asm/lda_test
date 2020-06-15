@@ -1,0 +1,5 @@
+.data
+    a = 255
+.prog
+    lda a
+    halt

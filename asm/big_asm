@@ -1,0 +1,34 @@
+.data
+    a = 0x2
+    b = 1
+    counter = 3
+    mystring = "abcdef"
+    strlen = 5
+
+.prog
+    lda a
+
+loop:
+    addi #1
+    sta  a
+    lda  counter
+    subi #1
+    sta  counter
+    jz   finish
+    jmp  loop
+
+finish:
+    lda  mystring
+    ldp
+    prnt
+    lda mystring
+    addi #1
+    sta mystring
+    lda strlen
+    subi #1
+    jz printed
+    sta strlen
+    jmp finish
+
+printed:
+    halt

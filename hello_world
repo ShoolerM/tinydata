@@ -1,0 +1,17 @@
+.data
+    enable = 15
+    string = "Hello, World!"
+.prog
+    dsp enable
+loop:
+    ldp string
+    subi #0
+    jz done
+    prnta
+    lda string
+    addi #1
+    sta string
+    jmp loop
+done:
+    halt
+

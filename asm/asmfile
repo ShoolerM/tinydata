@@ -1,0 +1,19 @@
+.data
+    a = 0x2
+    b = 1
+    counter = 3
+
+.prog
+    lda a
+
+loop:
+    addi #1
+    sta  a
+    lda  counter
+    subi #1
+    sta  counter
+    jz   finish
+    jmp  loop
+
+finish:
+    halt

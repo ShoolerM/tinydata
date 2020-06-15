@@ -1,0 +1,22 @@
+Use a shift register to extend number of control pins
+    Might need more nand gates to do this
+    
+    How to do this???
+        1 pin to say we need to use the shift register
+            What do we shift out?
+            How do we do that in 1(or < 1) microcode?
+            Have the microcode pick the pin that enables the 
+
+        May not need a shift register:
+            Get this:
+                If we use a pin from the EEPROM to say use the extended register (maybe these are always on)
+                    but pick a certain one based on the opcode, then we can use the extended gates????
+
+
+Move the 7 segment register display to the program counter
+
+
+
+Shopping List for Ideas:
+    Nand Gates x10 - Sn74ls00
+

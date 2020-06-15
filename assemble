@@ -43,9 +43,12 @@ class Parser(object):
             "subi": 10,
             "ldp": 11,
             "dsp": 12,
+            "prnt":13,
             "halt":14,
-            "prnt":15
+            "prnta":15
         }
+
+        self.one_line_opcodes = ["prnt", "prnta", "nop", "halt"]
         self.labels = {}
         self.variables = {}
         self.progLoc = 0;
@@ -53,13 +56,22 @@ class Parser(object):
         self.memory = {}
         self.i = 1
 
+    def getReverseMap(self, dictionary):
+        new_dict = {}
+        for i in dictionary.keys():
+            new_dict[dictionary[i]] = i
+        return new_dict
+
+
     def parse(self):
         if ".data" not in self.lines[0]:
             self.errors.append("Invalid file format, missing .data section")
             return
         self.parseLabels()
         while(self.lines[self.i].strip() != ".prog"):
-            line = lines[self.i].split()
+            if '//' in lines[self.i]:
+                lines[self.i] = lines[self.i].split("//")[0]
+            line = lines[self.i].split(maxsplit = 2)
             if line:
                 var = line[0]
                 value = line[2]
@@ -79,7 +91,6 @@ class Parser(object):
                 elif line[0] not in self.opcode_map:
                     self.errors.append("Line {0}:\n{1} is invalid! Exiting...".format(
                             self.i, lines[self.i]))
-                    sys.exit(0)
                 else:
                     self.parseOperation(line[0])
                     if len(line) > 1 :
@@ -93,27 +104,58 @@ class Parser(object):
 
     def errorCheck(self):
         if len(self.errors):
-            print("%d Errors were detected!", len(self.errors))
+            print("%d Errors were detected!" % len(self.errors))
             for i in self.errors:
                 print(i)
             sys.exit(0)
+
+    def printHumanReadable(self):
+        reverse_opcodes = self.getReverseMap(self.opcode_map)
+        reverse_vars = self.getReverseMap(self.variables)
+        reverse_labels = self.getReverseMap(self.labels)
+        print("Printing readable file...")
+        with open("src/human_readable_memfile", "w+") as f:
+            instr_toggle = 0
+            for i in sorted(self.memory.keys()):
+                line = str(i)+": "+str(self.memory[i])+"\t\t//"
+                if instr_toggle == 0 and i < self.progLoc:
+                    comment = reverse_opcodes[self.memory[i]]
+                    if comment not in self.one_line_opcodes:
+                        instr_toggle = 1
+                elif self.memory[i] in reverse_vars.keys():
+                    instr_toggle = 0
+                    comment = reverse_vars[self.memory[i]]
+                elif self.memory[i] in reverse_labels.keys():
+                    instr_toggle = 0
+                    comment = reverse_labels[self.memory[i]]
+                elif i in reverse_vars.keys():
+                    instr_toggle = 0
+                    comment = reverse_vars[i]
+                elif i > self.dataLoc:
+                    comment = chr(self.memory[i])
+                else:
+                    instr_toggle = 0
+                    comment = '#'+str(self.memory[i])
+                f.write(line+comment+"\n")
 
     def printMemoryToFile(self):
         print("Writing to file...")
         with open("src/memfile", 'w+') as f:
             for i in sorted(self.memory.keys()):
                 f.write(str(i)+"\n"+str(self.memory[i])+"\n")
-        with open("src/human_readable_memfile", "w+") as f:
-            for i in sorted(self.memory.keys()):
-                f.write(str(i)+": "+str(self.memory[i])+"\n")
+        self.printHumanReadable()
         print("Done!")
 
-            
     def parseString(self, var, value):
-        for i in value:
-           self.memory[self.dataLoc] = ord(i)
-           self.dataLoc -= 1
+        self.memory[self.dataLoc] = 0
+        self.dataLoc -= 1
+        value = value[::-1]
+        for i in value[2:-1]:
+            self.memory[self.dataLoc] = ord(i)
+            self.dataLoc -= 1
+        self.memory[self.dataLoc] = self.dataLoc+1
         self.variables[var] = self.dataLoc
+        self.dataLoc -= 1
         
     def parseInt(self, var, value):
         self.variables[var] = self.dataLoc
@@ -137,7 +179,9 @@ class Parser(object):
             if line:
                 if ":" in line[0]:
                     self.labels[line[0][:-1]] = progLoc
-                progLoc += 1
+                    i+=1
+                    continue
+                progLoc += 2
             i+=1
 
     def parseOperation(self, op):
@@ -157,7 +201,7 @@ class Parser(object):
             self.memory[self.progLoc] = self.labels[operand]
             self.progLoc+=1
         else:
-            self.errors.append("Invalid instruction at line {0}\n{1}".format(
+            self.errors.append("Invalid Operand at line {0}\n{1}".format(
                     self.i, self.lines[self.i]))
 
 

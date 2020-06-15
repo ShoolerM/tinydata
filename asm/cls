@@ -1,0 +1,9 @@
+.data
+    enable = 0xff
+    clear2 = 1    //Clear + disable?
+    clear3 = 0x10
+    clear4 = 0x80 //Backspace
+    clear5 = 8
+.prog
+    lda enable
+    halt
