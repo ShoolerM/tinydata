@@ -57,6 +57,37 @@ void runProgram()
 
 }
 
+void stepProgram()
+{
+    for(int i = 0; i<8; i++)
+    {
+        pinMode(mar_pins[i], INPUT);
+        pinMode(ram_pins[i], INPUT);
+    }
+    digitalWrite(PROG, HIGH);
+    digitalWrite(CLOCK_STOP, LOW);
+    printf("Pins set, getting ready to run...\n");
+    int stop;
+    char input;
+    while(input != 0x63)
+    {
+        printf("Half Step");
+        input = getchar();
+        digitalWrite(RUN, LOW);
+        printf("Half Step");
+        input = getchar();
+        stop = digitalRead(CLOCK_STOP);
+        digitalWrite(RUN, HIGH);
+    }
+    printf("Done stepping, running...\n");
+    while(1)
+    {
+        digitalWrite(RUN, LOW);
+        digitalWrite(RUN, HIGH);
+    }
+    printf("Clock Stop was set");
+}
+
 void setAllPins(int state)
 {
     for(int i = 0; i<8; i++)
@@ -80,15 +111,23 @@ void setMAR(int value)
 void writeRAM(int value)
 {
     digitalWrite(WRITE, HIGH);
+
+    //Need to force PROG to be low so we can continue writing to RAM
+    pinMode(PROG, OUTPUT);
+    digitalWrite(PROG, LOW);
     for(int i=0; i<8; i++)
     {
         if((value >> i) & 1)
+        {
             digitalWrite(ram_pins[i], HIGH);
+        }
         else
+        {
             digitalWrite(ram_pins[i], LOW);
+        }
     }
     digitalWrite(WRITE, LOW);
-    delay(10);
+    delay(20);
     digitalWrite(WRITE, HIGH);
 }
 

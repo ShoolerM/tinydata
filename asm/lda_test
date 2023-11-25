@@ -1,5 +1,7 @@
 .data
-    a = 255
+    c = 255
+    d = 0xff
 .prog
-    lda a
+    lda c
+    lda d
     halt

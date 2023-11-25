@@ -1,10 +1,23 @@
 #include <stdio.h>
 #include <wiringPi.h>
 #include <inttypes.h>
+#include <string.h>
 #include "tools.h"
 #include "ram.h"
 #include "functions.h"
 
+
+void viewMode()
+{
+    int address = 0;
+    while(address < 256)
+    {
+        puts("Address: ");
+        scanf("%d", &address);
+        puts("\n");
+        setMAR(address);
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -14,6 +27,7 @@ int main(int argc, char *argv[])
         return 0;
     }
     char* filename = argv[1];
+    printf("Running %s\n", filename);
     FILE* file = GetFile(filename);
     int* lines = (int*) calloc(255, sizeof(int*));
     int numLines = GetLines(file, lines);
@@ -34,7 +48,13 @@ int main(int argc, char *argv[])
                 break;
         }
     }
+    if(argc > 2)
+    {
+        //if(!strcmp(argv[2], "view"))
+        viewMode();
+    }
     setAllPins(LOW);
-    runProgram();
+    printf("Running...\n");
+    stepProgram();
     return 0;
 }
