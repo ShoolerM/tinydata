@@ -1,9 +1,25 @@
 .data
-    enable = 0xff
-    clear2 = 1    //Clear + disable?
-    clear3 = 0x10
-    clear4 = 0x80 //Backspace
-    clear5 = 8
+//Turns the LCD on for writing
+    enable = 0xf
+    off = 0xe
+    write_mode = 0x6
+//sets up usage
+    function_set = 0x38
+    goto_second_row = 0xC0
+    clear = 1
+    home = 2
+    a = 0x61
+    s = 0x73
+
 .prog
-    lda enable
+    dsp function_set
+    dsp write_mode
+    dsp enable
+    dsp clear
+    halt
+    lda a
+    prnta
+    lda s
+    prnta
+    prnta
     halt

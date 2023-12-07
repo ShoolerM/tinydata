@@ -7,18 +7,6 @@
 #include "functions.h"
 
 
-void viewMode()
-{
-    int address = 0;
-    while(address < 256)
-    {
-        puts("Address: ");
-        scanf("%d", &address);
-        puts("\n");
-        setMAR(address);
-    }
-}
-
 int main(int argc, char *argv[])
 {
     if(argc < 2)
@@ -48,13 +36,19 @@ int main(int argc, char *argv[])
                 break;
         }
     }
-    if(argc > 2)
-    {
-        //if(!strcmp(argv[2], "view"))
+    setAllPins(LOW);
+    printf("argv: %s\n", argv[2]);
+    if(!strcmp(argv[1], "view")){
+        printf("View Mode\n");
         viewMode();
     }
-    setAllPins(LOW);
-    printf("Running...\n");
-    stepProgram();
+    else if(!strcmp(argv[2], "step")){
+        printf("Step mode\n");
+        stepProgram();
+    }       
+    else{
+        printf("Running...\n");
+        runProgram(0, atoi(argv[2]));
+    }
     return 0;
 }

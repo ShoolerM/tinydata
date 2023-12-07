@@ -10,8 +10,8 @@
 #define PROG 9 //PIN 3
 #define WRITE 7 //PIN 4
 #define STEP 3 //NA
-#define CLOCK_START 0 //PIN 6
-#define CLOCK_STOP  2 //PIN 7
+#define HALT 0 //PIN 6
+#define RESET  2 //PIN 7
 
 typedef struct MemoryTracker
 {
@@ -29,9 +29,10 @@ MemoryTracker* InitMemoryTracker();
 void writeData(MemoryTracker* memTracker);
 void writeOut(MemoryTracker* memTracker, uint8_t opcode);
 void initPins();
-void runProgram();
+void runProgram(int state, int speed);
 void stepProgram();
 void setAllPins();
 void setMAR(int value);
 void writeRAM(int value);
+void viewMode();
 #endif

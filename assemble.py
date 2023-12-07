@@ -1,0 +1,231 @@
+#!/usr/bin/python3
+
+import sys
+import subprocess
+
+def getLines(filename):
+    lines = []
+    with open(filename, 'r+') as f:
+        for i in f.readlines():
+            if len(i):
+                lines.append(i)
+    return lines
+
+
+class Parser(object):
+    """
+    Take in the provided data from the file and parse through it.
+    Return value is inteded to be the direct memory layout of the memory for tinydata
+    I.e:
+    1  - op
+    ff - data
+    3  - op
+    45 - data
+    5  - single line op
+    1  - op
+    14
+    ...
+    """
+    def __init__(self, lines):
+        self.lines = lines
+        self.errors = []
+        self.opcode_map = {
+            "nop": 0,
+            "lda": 1,
+            "add": 2,
+            "sub": 3,
+            "sta": 4,
+            "ldi": 5,
+            "jmp": 6,
+            "jc": 7,
+            "jz": 8,
+            "addi": 9,
+            "subi": 10,
+            "ldp": 11,
+            "dsp": 12,
+            "prnt":13,
+            "halt":14,
+            "prnta":15
+        }
+
+        self.one_line_opcodes = ["prnt", "prnta", "nop", "halt"]
+        self.labels = {}
+        self.variables = {}
+        self.progLoc = 0;
+        self.dataLoc = 255;
+        self.memory = {}
+        self.i = 1
+
+    def getReverseMap(self, dictionary):
+        new_dict = {}
+        for i in dictionary.keys():
+            new_dict[dictionary[i]] = i
+        return new_dict
+
+
+    def parse(self):
+        if ".data" not in self.lines[0]:
+            self.errors.append("Invalid file format, missing .data section")
+            return
+        self.parseLabels()
+        #Parse the data section
+        while(self.lines[self.i].strip() != ".prog"):
+            #Get rid of comments
+            if '//' in lines[self.i]:
+                lines[self.i] = lines[self.i].split("//")[0]
+            line = lines[self.i].split(maxsplit = 2)
+            if line:
+                var = line[0]
+                value = line[2]
+                if "\"" in value or '\'' in value:
+                    self.parseString(var, value)
+                else:
+                    self.parseInt(var, value)
+            self.i+=1
+        self.i+=1
+        
+        while(self.i < len(self.lines)):
+            line = lines[self.i].split()
+            if line:
+                if line[0][:-1] in self.labels:
+                    self.i += 1
+                    continue
+                elif line[0] not in self.opcode_map:
+                    self.errors.append("Line {0}:\n{1} is invalid! Exiting...".format(
+                            self.i, lines[self.i]))
+                else:
+                    self.parseOperation(line[0])
+                    if len(line) > 1 :
+                        self.parseOperand(line[1])
+            self.i += 1
+        if(self.progLoc > self.dataLoc):
+            self.errors.append("Ran out of memory");
+
+        self.errorCheck()
+        self.printMemoryToFile()
+
+    def errorCheck(self):
+        if len(self.errors):
+            print("%d Errors were detected!" % len(self.errors))
+            for i in self.errors:
+                print(i)
+            sys.exit(0)
+
+    def printHumanReadable(self):
+        reverse_opcodes = self.getReverseMap(self.opcode_map)
+        reverse_vars = self.getReverseMap(self.variables)
+        reverse_labels = self.getReverseMap(self.labels)
+        prev_op = 'NONE'
+        print("Printing readable file...")
+        import pdb
+        with open("src/human_readable_memfile", "w+") as f:
+            for i in sorted(self.memory.keys()):
+                try:
+                    current_op = reverse_opcodes[self.memory[i]]
+                except Exception as e:
+                    current_op = ''
+                line = str(i)+": "+str(self.memory[i])+"\t\t//"
+                if prev_op not in "jmp jz jc addi subi" and current_op:
+                    if i < self.progLoc:
+                        try:
+                            comment = reverse_opcodes[self.memory[i]]
+                        except Exception as e:
+                            comment = "???"
+                elif self.memory[i] in reverse_vars.keys():
+                    comment = reverse_vars[self.memory[i]]
+                elif self.memory[i] in reverse_labels.keys():
+                    comment = reverse_labels[self.memory[i]]
+                elif i in reverse_vars.keys():
+                    comment = reverse_vars[i]
+                elif i > self.dataLoc:
+                    comment = chr(self.memory[i])
+                else:
+                    comment = '#'+str(self.memory[i])
+                f.write(line+comment+"\n")
+                if prev_op in "jmp jz jc addi subi":
+                    prev_op = 'NONE'
+                if current_op:
+                    prev_op = current_op
+
+    def printMemoryToFile(self):
+        print("Writing to file...")
+        with open("src/memfile", 'w+') as f:
+            for i in sorted(self.memory.keys()):
+                f.write(str(i)+"\n"+str(self.memory[i])+"\n")
+        self.printHumanReadable()
+        print("Done!")
+
+    def parseString(self, var, value):
+        self.memory[self.dataLoc] = 0
+        self.dataLoc -= 1
+        value = value[::-1]
+        for i in value[2:-1]:
+            self.memory[self.dataLoc] = ord(i)
+            self.dataLoc -= 1
+        self.memory[self.dataLoc] = self.dataLoc+1
+        self.variables[var] = self.dataLoc
+        self.dataLoc -= 1
+        
+    def parseInt(self, var, value):
+        self.variables[var] = self.dataLoc
+        self.memory[self.dataLoc] = int(value, 0)
+        self.dataLoc -= 1
+
+    def parseLabels(self):
+        i = 0
+        progLoc = 0
+        #Skip the .data section
+        while(i < len(self.lines)):
+            i+=1
+            if lines[i].strip() == ".prog":
+                #skip this line
+                i+=1
+                break
+        
+        #Parse the .prog section
+        while(i < len(self.lines)):
+            line = lines[i].split()
+            if line:
+                if ":" in line[0]:
+                    self.labels[line[0][:-1]] = progLoc
+                    i+=1
+                    continue
+                if line[0] in self.one_line_opcodes:
+                    progLoc += 1
+                else:
+                    progLoc += 2
+            i+=1
+
+    def parseOperation(self, op):
+        self.memory[self.progLoc] = self.opcode_map[op]
+        self.progLoc += 1
+
+    def parseOperand(self, operand):
+        operand = operand.strip()
+        if operand in self.variables.keys():
+            self.memory[self.progLoc] = self.variables[operand]
+            self.progLoc += 1
+        elif '#' in operand:
+            operand = operand[1:]
+            self.memory[self.progLoc] = int(operand, 0)
+            self.progLoc += 1
+        elif operand in self.labels:
+            self.memory[self.progLoc] = self.labels[operand]
+            self.progLoc+=1
+        else:
+            self.errors.append("Invalid Operand at line {0}\n{1}".format(
+                    self.i, self.lines[self.i]))
+
+
+if __name__ == "__main__":
+    if not len(sys.argv) > 1:
+        print("Please enter a valid filename!")
+        sys.exit(0)
+    filename = sys.argv[2]
+    filename = 'asm/'+filename
+    lines = getLines(filename)
+    p = Parser(lines)
+    p.parse()
+    if len(sys.argv) > 3:
+        subprocess.call(["./src/test", "./src/memfile", sys.argv[1], sys.argv[2]])#sys.argv[1], sys.argv[2]])
+    subprocess.call(["./src/test", "./src/memfile", sys.argv[1]])

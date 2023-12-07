@@ -1,17 +1,14 @@
 .data
-    a = 1
     b = 5
-    c = 1
+    c = 0x41
+    x = 0
+    enable = 0xf
+    clear = 1
 .prog
-loop:
-    lda a
-    add c
-    sta a
-    lda b
-    sub c
+    dsp clear
+    ldi #1
+    subi #1
     jz done
-    sta b
-    jmp loop
+    prnt c
 done:
-    lda a
     halt

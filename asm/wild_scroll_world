@@ -1,0 +1,54 @@
+.data
+    string1 = "Hello, World!"
+    string2 = "                "
+//Turns the LCD on for writing
+    enable = 0xf
+    off = 0xe
+    write_mode = 0x6
+    shift_mode = 0x10
+//sets up usage
+    function_set = 0x38
+    cursor_pos = 0x8f
+    clear = 1
+    home = 2
+    entry_mode = 0x7
+    string1_bak = 0
+    string2_bak = 0
+
+.prog
+    dsp clear
+    dsp entry_mode
+    dsp function_set
+    dsp shift_mode
+    dsp cursor_pos
+
+    lda string1
+    sta string1_bak
+    lda string2
+    sta string2_bak
+start_loop:
+    lda string1_bak
+    sta string1
+loop:
+    ldp string1
+    addi #0
+    jz start_wipe
+    prnta
+    lda string1
+    addi #1
+    sta string1
+    jmp loop
+start_wipe:
+    lda string2_bak
+    sta string2
+wipe:
+    ldp string2
+    addi #0
+    jz start_loop
+    prnta
+    lda string2
+    addi #1
+    sta string2
+    jmp wipe
+done:
+    halt

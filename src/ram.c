@@ -1,7 +1,10 @@
 #include <stdio.h>
 #include <wiringPi.h>
 #include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include "ram.h"
+
 
 //Order is LSB -> MSB
 //This will appear backwards on actual tiny data
@@ -19,6 +22,18 @@ MemoryTracker* InitMemoryTracker()
     return mt;
 }
 
+void viewMode()
+{
+    int address = 0;
+    while(address < 256)
+    {
+        puts("Address: ");
+        scanf("%d", &address);
+        puts("\n");
+        setMAR(address);
+    }
+}
+
 void initPins()
 {
     wiringPiSetup();
@@ -34,58 +49,80 @@ void initPins()
     pinMode(PROG, OUTPUT);
     pinMode(WRITE, OUTPUT);
     pinMode(STEP, OUTPUT);
-    pinMode(CLOCK_START, OUTPUT);
-    pinMode(CLOCK_STOP, OUTPUT);
+    pinMode(HALT, OUTPUT);
+    pinMode(RESET, OUTPUT);
 
-    digitalWrite(RUN, HIGH);
+    digitalWrite(RUN, LOW);
     digitalWrite(PROG, LOW);
     digitalWrite(WRITE, HIGH);
     digitalWrite(STEP, LOW);
-    digitalWrite(CLOCK_START, LOW);
-    digitalWrite(CLOCK_STOP, HIGH);
+    digitalWrite(HALT, LOW);
+    digitalWrite(RESET, HIGH);
 }
 
-void runProgram()
+void runProgram(int state, int speed)
 {
-    for(int i = 0; i<8; i++)
-    {
-        pinMode(mar_pins[i], INPUT);
-        pinMode(ram_pins[i], INPUT);
-    }
-    digitalWrite(RUN, LOW);
+    
+    setMAR(0);
     digitalWrite(PROG, HIGH);
-
-}
-
-void stepProgram()
-{
-    for(int i = 0; i<8; i++)
-    {
-        pinMode(mar_pins[i], INPUT);
-        pinMode(ram_pins[i], INPUT);
-    }
-    digitalWrite(PROG, HIGH);
-    digitalWrite(CLOCK_STOP, LOW);
-    printf("Pins set, getting ready to run...\n");
-    int stop;
-    char input;
-    while(input != 0x63)
-    {
-        printf("Half Step");
-        input = getchar();
-        digitalWrite(RUN, LOW);
-        printf("Half Step");
-        input = getchar();
-        stop = digitalRead(CLOCK_STOP);
-        digitalWrite(RUN, HIGH);
-    }
-    printf("Done stepping, running...\n");
+    digitalWrite(RESET, LOW);
+    pinMode(HALT, INPUT);
+    printf("Speed: %d\n", speed);
+    
     while(1)
     {
-        digitalWrite(RUN, LOW);
-        digitalWrite(RUN, HIGH);
+        usleep(speed*100);
+        if(state == 1){
+            state = 0;
+            digitalWrite(RUN, LOW);
+        }
+        else{
+            state = 1;
+            digitalWrite(RUN, HIGH);
+        }
+        if (digitalRead(HALT)){
+            printf("GOT HALT!\n");
+            return;
+        }
     }
-    printf("Clock Stop was set");
+}
+
+void stepProgram(int speed)
+{
+    for(int i = 0; i<8; i++)
+    {
+        pinMode(mar_pins[i], INPUT);
+        pinMode(ram_pins[i], INPUT);
+    }
+    setMAR(0);
+    digitalWrite(PROG, HIGH);
+    digitalWrite(RESET, LOW);
+    pinMode(HALT, INPUT);
+    printf("Pins set, getting ready to run...\n");
+    char input[100];
+    int state = 0;
+    while(strcmp(input, "r\n"))
+    {
+        memset(input, 0, sizeof(input));
+        fgets(input, sizeof(input), stdin);
+        if (!strcmp(input, "DEBUG\n"))
+            viewMode();
+        printf("Half Step\n");
+        if(state == 1){
+            state = 0;
+            digitalWrite(RUN, LOW);
+        }
+        else{
+            state = 1;
+            digitalWrite(RUN, HIGH);
+        }
+        if (digitalRead(HALT)){
+            printf("GOT HALT!\n");
+            return;
+        }
+    }
+    printf("Done stepping, running...\n");
+    runProgram(state, speed);
 }
 
 void setAllPins(int state)
